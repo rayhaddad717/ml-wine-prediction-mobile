@@ -4,8 +4,8 @@
  *
  * @format
  */
-
-import React from 'react';
+import SplashScreen from 'react-native-splash-screen';
+import React, {useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
 import {StatusBar, StyleSheet, useColorScheme} from 'react-native';
 import Tabs from './src/Tabs';
@@ -21,6 +21,9 @@ function App(): JSX.Element {
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
+  useEffect(() => {
+    SplashScreen.hide();
+  }, []);
   return (
     <NativeBaseProvider>
       <StatusBar
