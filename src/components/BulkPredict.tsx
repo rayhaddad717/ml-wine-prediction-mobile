@@ -5,6 +5,7 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
+  TouchableOpacity,
 } from 'react-native';
 import React, {useCallback, useState} from 'react';
 import DocumentPicker, {
@@ -87,11 +88,24 @@ const BulkPredict = () => {
           }}
         />
       </HStack>
-      {!fileResponse.length ? (
-        <Text>Please upload a CSV File</Text>
-      ) : (
-        <Text>File selected : {fileResponse[0].name}</Text>
-      )}
+      <HStack justifyContent="space-around" alignItems="center">
+        <TouchableOpacity onPress={handleDocumentSelection}>
+          {!fileResponse.length ? (
+            <Text>Please upload a CSV File</Text>
+          ) : (
+            <Text numberOfLines={2} style={{maxWidth: '75%'}}>
+              File selected : {fileResponse[0].name}
+            </Text>
+          )}
+        </TouchableOpacity>
+        {fileResponse.length ? (
+          <TouchableOpacity
+            onPress={() => setFileResponse([])}
+            style={{marginLeft: 15}}>
+            <Text style={{color: COLORS.PRIMARY_BLUE, fontSize: 20}}>x</Text>
+          </TouchableOpacity>
+        ) : null}
+      </HStack>
 
       <HStack alignItems="center" mt={5}>
         <Text style={styles.title}>Predictions:</Text>
@@ -148,11 +162,11 @@ const BulkPredict = () => {
 
       <View style={styles.buttonContainer}>
         <Button mt="5" colorScheme="cyan" onPress={handleDocumentSelection}>
-          Select 📑
+          Select Sheet
         </Button>
 
         <Button mt="5" colorScheme="cyan" onPress={handleSubmit}>
-          Predict
+          {isLoading ? 'Predicting...' : 'Predict'}
         </Button>
       </View>
     </View>

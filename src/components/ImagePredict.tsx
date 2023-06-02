@@ -17,6 +17,8 @@ import {
   Button,
   Divider,
   HStack,
+  ZStack,
+  Box,
 } from 'native-base';
 
 import React, {useCallback, useState} from 'react';
@@ -27,6 +29,7 @@ import {COLORS} from '../constants/styles';
 import AlertUtil from '../utils/AlertUtil';
 import {API} from '../utils/API';
 import {AxiosError} from 'axios';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 const ImagePredict = () => {
   const [fileResponse, setFileResponse] = useState<DocumentPickerResponse[]>(
     [],
@@ -52,9 +55,9 @@ const ImagePredict = () => {
   const getErrors = (errors: any) => {
     let error = '';
     for (const key in errors?.errors) {
-      error = error.concat(`${key},`);
+      error = error.concat(`${key}, `);
     }
-    return error.concat(` are missing`);
+    return error;
   };
   const reset = () => {
     setExtractedText(null);
@@ -76,7 +79,10 @@ const ImagePredict = () => {
         //   headers: {'Content-Type': 'multipart/form-data'},
         //   timeout: 1000,
         // });
-        let res = await API.post('/wine/predict_from_image', image);
+        let res = await API.post<{text: string; prediction: number}>(
+          '/wine/predict_from_image',
+          image,
+        );
         if (res.status == 200) {
           setExtractedText(res.data.text);
           setPrediction(res.data.prediction == 1 ? 'good' : 'bad');
@@ -85,8 +91,12 @@ const ImagePredict = () => {
           setError('Please Select File first');
         }
       } catch (err: any) {
-        const error: AxiosError = err;
-        // setPrediction(getErrors(error.response?.data as any));
+        const error: AxiosError<{text: string; errors: object}> = err;
+        if (error.response?.data?.text) {
+          setExtractedText(error.response?.data?.text);
+          setPrediction(getErrors(error.response?.data));
+          setError('Missing Fields');
+        }
         if (error.code == 'ECONNABORTED') {
           setError('No Internet Connection');
         }
@@ -94,6 +104,9 @@ const ImagePredict = () => {
     }
     setLoading(false);
   };
+  const clearDocumentSelection = useCallback(() => {
+    setFileResponse([]);
+  }, []);
   const handleDocumentSelection = useCallback(async () => {
     try {
       const response = await DocumentPicker.pick({
@@ -104,7 +117,7 @@ const ImagePredict = () => {
       setFileResponse(response);
       reset();
     } catch (err) {
-      console.warn(err);
+      // console.warn(err);
     }
   }, []);
 
@@ -122,7 +135,9 @@ const ImagePredict = () => {
           />
         </HStack>
         {!fileResponse.length && (
-          <Text style={{marginLeft: 10}}>Please upload an Image</Text>
+          <TouchableOpacity onPress={handleDocumentSelection}>
+            <Text style={{marginLeft: 10}}>Please upload an Image</Text>
+          </TouchableOpacity>
         )}
         {fileResponse.length > 0 && (
           <View style={styles.imageContainer}>
@@ -130,6 +145,15 @@ const ImagePredict = () => {
               onPress={handleDocumentSelection}
               activeOpacity={0.6}>
               <Center>
+                <Box position="absolute" top={0} right={0} zIndex={20}>
+                  <TouchableOpacity onPress={clearDocumentSelection}>
+                    <Ionicons
+                      name="close-outline"
+                      size={40}
+                      color={COLORS.PRIMARY_BLUE}
+                    />
+                  </TouchableOpacity>
+                </Box>
                 <Image
                   resizeMode="contain"
                   ref={myRef}
@@ -163,8 +187,15 @@ const ImagePredict = () => {
                 }}
               />
             </HStack>
-            <View style={{flexDirection: 'row', gap: 5, marginVertical: 20}}>
-              <Text>Your Wine is</Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 5,
+                marginVertical: 20,
+                flexWrap: 'wrap',
+              }}>
+              {error ? <Text>Missing Values:</Text> : <Text>Your Wine is</Text>}
+
               <Text style={{color: COLORS.PRIMARY_BLUE, fontWeight: '600'}}>
                 {prediction}
               </Text>
@@ -175,7 +206,10 @@ const ImagePredict = () => {
           <AlertUtil
             message={error}
             title="Error"
-            close={() => setError(null)}
+            close={() => {
+              setError(null);
+              setPrediction(null);
+            }}
           />
         )}
         {extractedText && (
@@ -195,11 +229,11 @@ const ImagePredict = () => {
         )}
         <View style={styles.buttonContainer}>
           <Button onPress={handleDocumentSelection} mt="5" colorScheme="cyan">
-            Select 📑
+            Select Image
           </Button>
 
           <Button mt="5" colorScheme="cyan" onPress={handleSubmit}>
-            Predict
+            {isLoading ? 'Predicting...' : 'Predict'}
           </Button>
         </View>
       </View>
