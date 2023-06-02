@@ -24,7 +24,9 @@ import DocumentPicker, {
   DocumentPickerResponse,
 } from 'react-native-document-picker';
 import {COLORS} from '../constants/styles';
-import axios, {AxiosError} from 'axios';
+import AlertUtil from '../utils/AlertUtil';
+import {API} from '../utils/API';
+import {AxiosError} from 'axios';
 const ImagePredict = () => {
   const [fileResponse, setFileResponse] = useState<DocumentPickerResponse[]>(
     [],
@@ -32,6 +34,8 @@ const ImagePredict = () => {
   const [isLoading, setLoading] = useState(false);
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<string | null>(null);
+  const [error, setError] = useState<null | string>(null);
+
   const myRef = React.useRef<any>(null);
   React.useEffect(() => {
     if (myRef.current && myRef.current.setNativeProps) {
@@ -65,25 +69,26 @@ const ImagePredict = () => {
       const image = new FormData();
       image.append('image', fileToUpload);
       try {
-        let res = await axios({
-          method: 'post',
-          url: 'http://192.168.1.109:5000/api/wine/predict_from_image',
-          data: image,
-          headers: {'Content-Type': 'multipart/form-data'},
-        });
+        // let res = await axios({
+        //   method: 'post',
+        //   url: 'http://192.168.1.109:5000/api/wine/predict_from_image',
+        //   data: image,
+        //   headers: {'Content-Type': 'multipart/form-data'},
+        //   timeout: 1000,
+        // });
+        let res = await API.post('/wine/predict_from_image', image);
         if (res.status == 200) {
           setExtractedText(res.data.text);
           setPrediction(res.data.prediction == 1 ? 'good' : 'bad');
         } else {
           // If no file selected the show alert
-          Alert.alert('Please Select File first');
+          setError('Please Select File first');
         }
       } catch (err: any) {
         const error: AxiosError = err;
-        console.log(error.response?.data);
-        setPrediction(getErrors(error.response?.data as any));
+        // setPrediction(getErrors(error.response?.data as any));
         if (error.code == 'ECONNABORTED') {
-          Alert.alert('No Internet Connection');
+          setError('No Internet Connection');
         }
       }
     }
@@ -106,7 +111,19 @@ const ImagePredict = () => {
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic">
       <View style={styles.container}>
-        {!fileResponse.length && <Text>Please upload an Image</Text>}
+        <HStack alignItems="center" mb={5}>
+          <Text style={styles.title}>Image:</Text>
+          <Divider
+            ml={5}
+            width="80%"
+            _light={{
+              bg: COLORS.PRIMARY_BLUE,
+            }}
+          />
+        </HStack>
+        {!fileResponse.length && (
+          <Text style={{marginLeft: 10}}>Please upload an Image</Text>
+        )}
         {fileResponse.length > 0 && (
           <View style={styles.imageContainer}>
             <TouchableOpacity
@@ -133,6 +150,7 @@ const ImagePredict = () => {
             style={{marginTop: 10}}
           />
         )}
+
         {prediction && (
           <View style={styles.sectionContainer}>
             <HStack alignItems="center" mt={5}>
@@ -152,6 +170,13 @@ const ImagePredict = () => {
               </Text>
             </View>
           </View>
+        )}
+        {error && (
+          <AlertUtil
+            message={error}
+            title="Error"
+            close={() => setError(null)}
+          />
         )}
         {extractedText && (
           <View style={styles.sectionContainer}>

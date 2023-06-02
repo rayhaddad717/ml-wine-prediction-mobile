@@ -23,6 +23,7 @@ import {Colors} from 'react-native/Libraries/NewAppScreen';
 import {useScrollToTop} from '@react-navigation/native';
 import {COLORS} from '../constants/styles';
 import AlertUtil from '../utils/AlertUtil';
+import {API} from '../utils/API';
 type field_names = {
   field_name:
     | 'fixedAcidity'
@@ -97,15 +98,21 @@ export default function WinePredict() {
   useScrollToTop(ref);
   const onSubmit = async (data: IWineSample) => {
     setIsLoading(true);
-    axios
-      .post<APIResponse>(
-        'http://192.168.1.109:5000/api/wine/predict',
-        {
-          // .post<APIResponse>('http://10.0.2.2:5000/api/wine/predict', {
-          form: data,
-        },
-        {timeout: 1000},
-      )
+    // axios
+    //   .post<APIResponse>(
+    //     // 'http://192.168.12.10:5000/api/wine/predict',
+    //     'http://157.230.101.13:60216/api/wine/predict',
+    //     {
+    //       // .post<APIResponse>('http://10.0.2.2:5000/api/wine/predict', {
+    //       form: data,
+    //     },
+    //     {timeout: 2000},
+    //   )
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(data)) {
+      formData.append(key, value);
+    }
+    API.post('/wine/predict', formData)
       .then(res => {
         setIsLoading(false);
         if (res.data.success) {
@@ -115,6 +122,7 @@ export default function WinePredict() {
         }
       })
       .catch(error => {
+        console.log(error);
         setIsLoading(false);
         if (error.code === 'ECONNABORTED') {
           setError('No internet connection');

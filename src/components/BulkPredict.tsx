@@ -11,8 +11,10 @@ import DocumentPicker, {
   DocumentPickerResponse,
 } from 'react-native-document-picker';
 import {COLORS} from '../constants/styles';
-import axios, {AxiosError} from 'axios';
+import {AxiosError} from 'axios';
 import {Button, Divider, HStack} from 'native-base';
+import AlertUtil from '../utils/AlertUtil';
+import {API} from '../utils/API';
 const BulkPredict = () => {
   const [fileResponse, setFileResponse] = useState<DocumentPickerResponse[]>(
     [],
@@ -21,6 +23,7 @@ const BulkPredict = () => {
   const [qualities, setQualities] = useState<
     {name: string; quality: number}[] | null
   >(null);
+  const [error, setError] = useState<null | string>(null);
 
   const reset = () => {
     setQualities(null);
@@ -31,27 +34,29 @@ const BulkPredict = () => {
     if (fileResponse != null) {
       // If file selected then create FormData
       const fileToUpload = fileResponse[0];
-      const image = new FormData();
-      image.append('csv_file', fileToUpload);
+      const formData = new FormData();
+      formData.append('csv_file', fileToUpload);
       try {
-        let res = await axios({
-          method: 'post',
-          url: 'http://192.168.1.109:5000/api/wine/bulk_predict',
-          data: image,
-          headers: {'Content-Type': 'multipart/form-data'},
-        });
+        // let res = await axios({
+        //   method: 'post',
+        //   url: 'http://192.168.1.109:5000/api/wine/bulk_predict',
+        //   data: image,
+        //   headers: {'Content-Type': 'multipart/form-data'},
+        //   timeout: 1000,
+        // });
+        let res = await API.post('/wine/bulk_predict', formData);
         if (res.status == 200) {
           setQualities(res.data.predictions);
         } else {
           // If no file selected the show alert
-          Alert.alert('Please Select File first');
+          setError('Please Select File first');
         }
       } catch (err: any) {
         const error: AxiosError = err;
         console.log(error.response?.data);
         // setPrediction(getErrors(error.response?.data as any));
         if (error.code == 'ECONNABORTED') {
-          Alert.alert('No Internet Connection');
+          setError('No Internet Connection');
         }
       }
     }
@@ -72,6 +77,16 @@ const BulkPredict = () => {
   }, []);
   return (
     <View style={styles.container}>
+      <HStack alignItems="center" mb={5}>
+        <Text style={styles.title}>File:</Text>
+        <Divider
+          ml={5}
+          width="85%"
+          _light={{
+            bg: COLORS.PRIMARY_BLUE,
+          }}
+        />
+      </HStack>
       {!fileResponse.length ? (
         <Text>Please upload a CSV File</Text>
       ) : (
@@ -88,6 +103,9 @@ const BulkPredict = () => {
           }}
         />
       </HStack>
+      {error && (
+        <AlertUtil message={error} title="Error" close={() => setError(null)} />
+      )}
       {isLoading && (
         <ActivityIndicator
           size="large"
